@@ -3004,7 +3004,7 @@ func (nc *Conn) doReconnect(err error, forceReconnect bool) {
 		}
 
 		// We are reconnected
-		nc.Reconnects++
+		atomic.AddUint64(&nc.Reconnects, 1)
 
 		// Process connect logic
 		if nc.err = nc.processConnectInit(); nc.err != nil {
@@ -4117,8 +4117,8 @@ func (nc *Conn) publish(subj, reply string, hdr, data []byte) error {
 		return err
 	}
 
-	nc.OutMsgs++
-	nc.OutBytes += uint64(len(data) + len(hdr))
+	atomic.AddUint64(&nc.OutMsgs, 1)
+	atomic.AddUint64(&nc.OutBytes, uint64(len(data)+len(hdr)))
 
 	if len(nc.fch) == 0 {
 		nc.kickFlusher()
@@ -5864,15 +5864,13 @@ func (nc *Conn) isDrainingPubs() bool {
 func (nc *Conn) Stats() Statistics {
 	// Stats are updated either under connection's mu or with atomic operations
 	// for inbound stats in processMsg().
-	nc.mu.Lock()
 	stats := Statistics{
 		InMsgs:     atomic.LoadUint64(&nc.InMsgs),
 		InBytes:    atomic.LoadUint64(&nc.InBytes),
-		OutMsgs:    nc.OutMsgs,
-		OutBytes:   nc.OutBytes,
-		Reconnects: nc.Reconnects,
+		OutMsgs:    atomic.LoadUint64(&nc.OutMsgs),
+		OutBytes:   atomic.LoadUint64(&nc.OutBytes),
+		Reconnects: atomic.LoadUint64(&nc.Reconnects),
 	}
-	nc.mu.Unlock()
 	return stats
 }
 
