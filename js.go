@@ -800,15 +800,18 @@ func (js *js) CleanupPublisher() {
 
 func (js *js) cleanupReplySub() {
 	js.mu.Lock()
-	if js.rsub != nil {
-		js.rsub.Unsubscribe()
-		js.rsub = nil
-	}
-	if js.connStatusCh != nil {
-		close(js.connStatusCh)
-		js.connStatusCh = nil
-	}
+	rsub := js.rsub
+	js.rsub = nil
+	connStatusCh := js.connStatusCh
+	js.connStatusCh = nil
 	js.mu.Unlock()
+
+	if rsub != nil {
+		rsub.Unsubscribe()
+	}
+	if connStatusCh != nil {
+		close(connStatusCh)
+	}
 }
 
 // registerPAF will register for a PubAckFuture.
